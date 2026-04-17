@@ -1,0 +1,71 @@
+---
+description: React patterns for Signal Lab frontend — TanStack Query, RHF, shadcn/ui conventions.
+globs: apps/frontend/**/*.tsx,apps/frontend/**/*.ts
+alwaysApply: false
+---
+
+# Frontend Patterns
+
+## Server State — TanStack Query
+
+ALL data fetching goes through TanStack Query. Never use `useEffect` + `fetch`/`axios` directly.
+
+```typescript
+// ✅ Fetching data
+const { data, isLoading } = useQuery({
+  queryKey: ['scenario-runs'],
+  queryFn: () => scenariosApi.getRecent(20),
+  refetchInterval: 5000,
+});
+
+// ✅ Mutations
+const mutation = useMutation({
+  mutationFn: scenariosApi.run,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['scenario-runs'] });
+    toast({ title: 'Done' });
+  },
+  onError: (error) => {
+    toast({ title: 'Error', variant: 'destructive' });
+  },
+});
+
+// ❌ Forbidden
+useEffect(() => {
+  axios.get('/api/scenarios').then(setData);
+}, []);
+```
+
+## Forms — React Hook Form + Zod
+
+All forms use RHF with Zod schema validation.
+
+```typescript
+const schema = z.object({
+  type: z.enum(['success', 'validation_error', 'system_error', 'slow_request']),
+  name: z.string().optional(),
+});
+
+const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  resolver: zodResolver(schema),
+});
+```
+
+## UI Components — shadcn/ui
+
+- Use components from `@/components/ui/` (already installed)
+- Available: Button, Card, Input, Label, Badge, Select, Toast, Toaster
+- For notifications: `useToast()` hook + `<Toaster />` in layout
+- Loading states: use `disabled + Loader2` spinner on Button
+
+## File Structure
+- `src/app/` — Next.js App Router pages
+- `src/components/ui/` — shadcn primitives (don't modify)
+- `src/components/<domain>/` — feature components (e.g. `scenarios/`)
+- `src/hooks/` — custom hooks
+- `src/lib/api.ts` — all API calls via axios instance
+
+## Styling
+- Tailwind CSS only for layout and styling
+- Use `cn()` from `@/lib/utils` to merge class names
+- Color tokens via CSS variables (defined in `globals.css`)

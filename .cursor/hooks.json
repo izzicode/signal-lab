@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "command": ".cursor/hooks/check-schema-migration.sh",
+        "matcher": "Write|StrReplace",
+        "timeout": 10
+      },
+      {
+        "command": ".cursor/hooks/check-endpoint-observability.sh",
+        "matcher": "Write",
+        "timeout": 15
+      }
+    ]
+  }
+}

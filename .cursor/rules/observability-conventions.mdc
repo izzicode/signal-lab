@@ -1,0 +1,59 @@
+---
+description: Naming conventions for metrics, log format, and Sentry usage in Signal Lab.
+globs: apps/backend/**/*.ts
+alwaysApply: false
+---
+
+# Observability Conventions
+
+## Prometheus Metrics
+
+### Naming
+- `snake_case` only
+- Format: `<domain>_<action>_<unit>` — e.g. `scenario_runs_total`, `scenario_run_duration_seconds`
+- Counters end in `_total`
+- Histograms end in `_seconds` or `_bytes`
+
+### Required labels
+- Counters: always include `type` and `status`
+- Histograms: always include `type`
+
+### Where to add
+- Inject `MetricsService` via constructor
+- Increment in service layer, not controller
+- Always observe histogram at end of operation
+
+```typescript
+// Counter example
+this.metrics.scenarioRunsTotal.inc({ type: dto.type, status: 'completed' });
+
+// Histogram example
+this.metrics.scenarioRunDuration.observe({ type: dto.type }, durationSeconds);
+```
+
+## Structured Logging (Loki)
+
+Use `Logger` from `@nestjs/common`. nestjs-pino outputs JSON automatically.
+
+### Every log MUST include
+```typescript
+this.logger.log({
+  message: 'Human-readable description',
+  scenarioType: dto.type,      // for Loki filtering
+  scenarioId: run.id,
+  duration: ms,
+  // + error: string if applicable
+});
+```
+
+### Log levels
+- `log()` / `info` — normal operations
+- `warn()` — slow requests, validation errors, degraded state
+- `error()` — exceptions, failed operations
+
+## Sentry
+
+- Call `Sentry.captureException(exception)` for all 5xx errors (already in GlobalExceptionFilter)
+- Call `Sentry.addBreadcrumb()` for warning-level scenarios
+- DSN configured via `SENTRY_DSN` env variable
+- Do NOT add Sentry calls in controllers — use the filter + explicit service calls

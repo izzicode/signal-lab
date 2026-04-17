@@ -1,0 +1,44 @@
+---
+description: Allowed and forbidden libraries for Signal Lab. Enforces the mandatory stack.
+alwaysApply: true
+---
+
+# Stack Constraints
+
+## Frontend — ALLOWED
+- Next.js (App Router) — routing, SSR
+- shadcn/ui — all UI components (Button, Card, Input, Badge, Select, Toast, etc.)
+- Tailwind CSS — all styling
+- TanStack Query (`@tanstack/react-query`) — ALL server state, data fetching, caching
+- React Hook Form + Zod — ALL forms and validation
+- Axios — HTTP client (already configured in `src/lib/api.ts`)
+- lucide-react — icons
+
+## Frontend — FORBIDDEN
+- ❌ Redux, Zustand, Jotai, Recoil — no client state libs for server data
+- ❌ SWR, Apollo — use TanStack Query
+- ❌ Formik, react-final-form — use React Hook Form
+- ❌ MUI, Ant Design, Chakra — use shadcn/ui
+- ❌ styled-components, emotion — use Tailwind CSS
+- ❌ Plain CSS modules for layout — use Tailwind
+
+## Backend — ALLOWED
+- NestJS — framework
+- Prisma — database ORM
+- nestjs-pino — structured JSON logging
+- prom-client — Prometheus metrics
+- @sentry/nestjs — error tracking
+- class-validator + class-transformer — DTO validation
+- @nestjs/swagger — API documentation
+
+## Backend — FORBIDDEN
+- ❌ TypeORM, Sequelize, Drizzle, raw SQL — use Prisma only
+- ❌ Express directly — use NestJS abstractions
+- ❌ winston, bunyan — use nestjs-pino
+- ❌ Any other metrics lib — use prom-client
+
+## Database
+- PostgreSQL 16 only
+- All schema changes go through `prisma/schema.prisma`
+- Run `npx prisma migrate dev` after schema changes
+- Never use `$queryRaw` unless absolutely unavoidable

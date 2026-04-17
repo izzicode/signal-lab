@@ -1,0 +1,61 @@
+---
+description: Error handling conventions for Signal Lab backend and frontend.
+alwaysApply: true
+---
+
+# Error Handling Conventions
+
+## Backend
+
+### Never swallow errors
+```typescript
+// ❌ Bad
+try {
+  await riskyOperation();
+} catch (e) {}
+
+// ✅ Good
+try {
+  await riskyOperation();
+} catch (e) {
+  this.logger.error({ err: e, context: 'operationName' }, 'Operation failed');
+  throw e;  // or wrap in appropriate NestJS exception
+}
+```
+
+### Use NestJS HTTP exceptions
+```typescript
+throw new BadRequestException('Validation failed');
+throw new NotFoundException('Resource not found');
+throw new InternalServerErrorException('Unexpected error');
+// HTTP 418
+throw new HttpException({ signal: 42, message: "I'm a teapot" }, HttpStatus.I_AM_A_TEAPOT);
+```
+
+### GlobalExceptionFilter handles all uncaught exceptions
+- 5xx errors → captured in Sentry + logged at `error` level
+- 4xx errors → logged at `warn` level
+- Response always includes `{ statusCode, timestamp, path, message }`
+
+## Frontend
+
+### Axios error handling in mutations
+```typescript
+onError: (error) => {
+  let message = 'Unknown error';
+  if (axios.isAxiosError(error)) {
+    message = error.response?.data?.message ?? error.message;
+    if (Array.isArray(message)) message = message.join(', ');
+  }
+  toast({ title: 'Error', description: String(message), variant: 'destructive' });
+},
+```
+
+### Never throw unhandled errors in components
+- Wrap risky operations in try/catch
+- Show user-friendly toast messages
+- Use TanStack Query's `isError` / `error` states for query failures
+
+### API errors from backend
+Backend returns: `{ statusCode, timestamp, path, message }`
+Always read `error.response?.data?.message` for user-facing messages.

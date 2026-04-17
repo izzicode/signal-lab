@@ -1,0 +1,55 @@
+---
+description: How to use Prisma in Signal Lab. Forbidden patterns and required practices.
+globs: apps/backend/**/*.ts,prisma/**
+alwaysApply: false
+---
+
+# Prisma Patterns
+
+## Schema changes
+1. Edit `prisma/schema.prisma`
+2. Run `npx prisma migrate dev --name <description>`
+3. Run `npx prisma generate` to update the client
+4. Never manually edit migration files
+
+## Using PrismaService
+- `PrismaService` is globally provided — inject directly, no need to import PrismaModule
+- Always use typed Prisma operations
+
+```typescript
+// ✅ Correct
+constructor(private readonly prisma: PrismaService) {}
+
+const run = await this.prisma.scenarioRun.create({
+  data: { type, status, duration, metadata },
+});
+
+// ❌ Forbidden
+const runs = await this.prisma.$queryRaw`SELECT * FROM scenario_runs`;
+```
+
+## Required field patterns
+- `id` — always `@default(cuid())`, never manual
+- `createdAt` — always `@default(now())`
+- `metadata` — use `Json?` for flexible extra data
+- Add `@@index` for fields used in `where` clauses
+
+## Error handling
+Wrap Prisma calls in try/catch and re-throw as NestJS exceptions:
+
+```typescript
+try {
+  return await this.prisma.scenarioRun.create({ data });
+} catch (e) {
+  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+    throw new ConflictException('Duplicate entry');
+  }
+  throw e;
+}
+```
+
+## Forbidden
+- ❌ `$queryRaw` or `$executeRaw` unless absolutely unavoidable
+- ❌ Other ORMs (TypeORM, Drizzle, Sequelize)
+- ❌ Direct `pg` / `pg-pool` queries
+- ❌ Modifying Prisma migrations manually
